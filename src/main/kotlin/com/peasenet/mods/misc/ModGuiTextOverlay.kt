@@ -25,7 +25,6 @@ import com.peasenet.gavui.util.GavUISettings
 import com.peasenet.gavui.util.GuiUtil
 import com.peasenet.main.GavinsMod
 import com.peasenet.main.GavinsModClient
-import com.peasenet.mods.Mod
 import com.peasenet.mods.Type
 import com.peasenet.mods.gui.GuiMod
 import com.peasenet.settings.SettingBuilder
