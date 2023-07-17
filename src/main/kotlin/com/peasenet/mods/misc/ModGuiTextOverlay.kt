@@ -25,9 +25,10 @@ import com.peasenet.gavui.util.GavUISettings
 import com.peasenet.gavui.util.GuiUtil
 import com.peasenet.main.GavinsMod
 import com.peasenet.main.GavinsModClient
-import com.peasenet.mods.Type
+import com.peasenet.main.Mods
+import com.peasenet.mod.GuiTextOverlayMod
+import com.peasenet.mods.Mod
 import com.peasenet.mods.gui.GuiMod
-import com.peasenet.settings.SettingBuilder
 import com.peasenet.util.listeners.InGameHudRenderListener
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.resource.language.I18n
@@ -39,24 +40,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * @version 04-11-2023
  * A mod that shows the currently active mods in the top left screen.
  */
-class ModGuiTextOverlay : GuiMod(
+class ModGuiTextOverlay : MiscMod(
     "Text Overlay",
     "gavinsmod.mod.misc.textoverlay",
     "textoverlay",
 ), InGameHudRenderListener {
-    init {
-
-        //NOTE: This isn't really the best place for this, but it works for now. this is for chat message toggles.
-//        val chatMessage = ToggleSetting("gavinsmod.settings.misc.messages")
-//        chatMessage.setCallback { miscConfig.isMessages = chatMessage.value }
-//        chatMessage.value = miscConfig.isMessages
-        val chatMessage = SettingBuilder()
-            .setTitle("gavinsmod.settings.misc.messages")
-            .setState(miscConfig.isMessages)
-            .buildToggleSetting()
-        chatMessage.setCallback { miscConfig.isMessages = chatMessage.value }
-        addSetting(chatMessage)
-    }
 
     override fun onEnable() {
         super.onEnable()
@@ -69,14 +57,15 @@ class ModGuiTextOverlay : GuiMod(
     }
 
     override fun onRenderInGameHud(drawContext: DrawContext, delta: Float) {
-        if (GavinsMod.isEnabled(Type.MOD_GUI) || GavinsMod.isEnabled(Type.SETTINGS)) return
+        modList = Mods.mods.filter { mod: Mod -> mod !is GuiMod && mod !is ModGuiTextOverlay && mod.isActive }
+        if (GavinsMod.isEnabled("gui") || GavinsMod.isEnabled("settings") || modList.isEmpty()) return
         drawTextOverlay(drawContext)
     }
 
     /**
      * Draws the GUI text overlay if enabled, and if the main menu is not open.
      *
-     * @param matrixStack - The matrix stack to use.
+     * @param drawContext- The drawContext to use
      */
     private fun drawTextOverlay(drawContext: DrawContext) {
         val matrixStack = drawContext.matrices
@@ -84,17 +73,9 @@ class ModGuiTextOverlay : GuiMod(
         val startingPoint = PointF(0.5f, 0.5f)
         val currX = (startingPoint.x + 2).toInt()
         val currY = AtomicInteger((startingPoint.y + 2).toInt())
-        if (GavinsMod.isEnabled(Type.MOD_GUI) || !GavinsMod.isEnabled(Type.MOD_GUI_TEXT_OVERLAY) || GavinsMod.isEnabled(
-                Type.SETTINGS
-            )
-        ) return
-        // only get active mods, and mods that are not gui type.
-        val mods = GavinsMod.modsForTextOverlay.toList()
-        val modsCount = GavinsMod.modsForTextOverlay.count().toInt()
-        if (modsCount == 0) return
-        // get the mod with the longest name.
+        val modsCount = modList.count()
         var longestModName = 0
-        for (mod in mods) {
+        for (mod in modList) {
             longestModName = textRenderer.getWidth(I18n.translate(mod.translationKey)).coerceAtLeast(longestModName)
         }
         val box = BoxF(startingPoint, (longestModName + 4).toFloat(), modsCount * 10 + 0.5f)
@@ -106,7 +87,7 @@ class ModGuiTextOverlay : GuiMod(
         )
         GuiUtil.drawOutline(GavUISettings.getColor("gui.color.border"), box, matrixStack)
         val modCounter = AtomicInteger()
-        for (mod in mods) {
+        for (mod in modList) {
             drawContext.drawText(
                 textRenderer,
                 Text.translatable(mod.translationKey),
@@ -123,5 +104,9 @@ class ModGuiTextOverlay : GuiMod(
             currY.addAndGet(10)
             modCounter.getAndIncrement()
         }
+    }
+
+    companion object {
+        lateinit var modList: List<Mod>
     }
 }
